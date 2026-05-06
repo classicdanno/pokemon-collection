@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Collection / PSA 10</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0ede8;
+      --surface: #faf9f7;
+      --card-bg: #ffffff;
+      --border: #e0dbd3;
+      --border-hover: #c5bfb5;
+      --text: #18160f;
+      --muted: #8c8880;
+      --muted2: #b5b0a8;
+      --accent: #9a6f38;
+      --accent-dim: rgba(154,111,56,0.09);
+      --green-up: #0D7E1C;
+      --red-down: #C20812;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,0.13), 0 2px 6px rgba(0,0,0,0.06);
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 48px 32px 80px;
+    }
+
+    header {
+      max-width: 1200px;
+      margin: 0 auto 36px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 22px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.24em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    h1 em { color: var(--accent); font-style: italic; }
+
+    .header-stats { display: flex; gap: 14px; align-items: flex-end; }
+
+    .stat-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 7px 14px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+
+    .stat-pill strong { color: var(--accent); font-weight: 500; margin-left: 6px; }
+
+    .filters {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .filter-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 5px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .pcard {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.2s ease;
+      animation: fadeUp 0.4s ease both;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pcard:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-4px);
+      border-color: var(--border-hover);
+    }
+
+    /* Art — full Pokemon card aspect ratio, nothing cropped */
+    .card-art-wrap {
+      width: 100%;
+      aspect-ratio: 63 / 88;
+      background: linear-gradient(150deg, #edeae4 0%, #ddd9d0 100%);
+      overflow: hidden;
+    }
+
+    .card-art-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      transition: transform 0.4s ease;
+    }
+
+    .pcard:hover .card-art-wrap img { transform: scale(1.05); }
+
+    .art-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .art-placeholder svg { opacity: 0.18; }
+
+    .art-placeholder span {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: var(--muted2);
+      letter-spacing: 0.12em;
+    }
+
+    /* Shimmer loading state */
+    .art-shimmer {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #edeae4 25%, #e3dfd8 50%, #edeae4 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Info block */
+    .card-info {
+      padding: 11px 12px 13px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+
+    /* PSA grade tag — sits above Pokémon name */
+    .grade-tag {
+      display: inline-flex;
+      align-self: flex-start;
+      font-family: 'DM Mono', monospace;
+      font-size: 8.5px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    /* Dark green for 10, progressively brighter for lower grades */
+    .grade-10 { background: #025322; }
+    .grade-9  { background: #086820; }
+    .grade-8  { background: #0D7E1C; }
+    .grade-7  { background: #0C9012; }
+    .grade-6  { background: #0FA50C; }
+
+    /* Pokémon name — wraps to two lines, never truncates */
+    .card-pokemon {
+      font-family: 'DM Mono', monospace;
+      font-size: 12.5px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .card-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      color: var(--muted2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Price bar */
+    .price-bar {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 10px;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    .price-col { min-width: 0; flex: 1; }
+    .price-col.right { text-align: right; }
+
+    .price-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 8.5px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted2);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .price-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      display: block;
+    }
+
+    .price-value.up   { color: var(--green-up); }
+    .price-value.down { color: var(--red-down); }
+    .price-value.muted { color: var(--muted2); font-weight: 400; font-size: 10px; }
+
+    .price-divider {
+      width: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+      align-self: stretch;
+    }
+
+    /* Footer */
+    .footer {
+      max-width: 1200px;
+      margin: 24px auto 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-stat {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .footer-stat strong { color: var(--text); margin-left: 6px; }
+
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    @media (max-width: 1100px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+    @media (max-width: 860px)  { .grid { grid-template-columns: repeat(3, 1fr); } }
+    @media (max-width: 580px)  { .grid { grid-template-columns: repeat(2, 1fr); } }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">PSA 10 — English</div>
+    <h1>My <em>Collection</em></h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Cards<strong id="stat-count">—</strong></div>
+    <div class="stat-pill">Invested<strong id="stat-total">—</strong></div>
+    <div class="stat-pill">Current Value<strong id="stat-current">…</strong></div>
+  </div>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('mew',this)">Mew</button>
+  <button class="filter-btn" onclick="setFilter('celebrations',this)">Celebrations</button>
+  <button class="filter-btn" onclick="setFilter('evolutions',this)">Evolutions</button>
+  <button class="filter-btn" onclick="setFilter('promo',this)">Promos</button>
+  <button class="filter-btn" onclick="setFilter('psa10',this)">PSA 10</button>
+  <button class="filter-btn" onclick="setFilter('psa9',this)">PSA 9</button>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <div class="footer-stat">Showing <strong id="showing">—</strong></div>
+  <div class="footer-stat">Total Invested <strong id="footer-total">—</strong></div>
+</div>
+
+<script>
+  const COLLECTION = [
+    { pokemon:"Gengar",                      card:"Gengar-EX",                         set:"Phantom Forces",        number:"PHF 34",  grade:10, date:"12/28/2025", price:450, search:"Gengar-EX PHF 34" },
+    { pokemon:"Moltres & Zapdos & Articuno", card:"Moltres & Zapdos & Articuno-GX FA", set:"SM Black Star Promos",  number:"SM210",   grade:10, date:"12/24/2025", price:275, search:null, staticImage:"https://images.tcggo.com/tcggo/storage/10386/moltres-zapdos-articuno-gx-pr-sm-sm210-sm-black-star-promos-pokemon.png", staticPrice:400 },
+    { pokemon:"Terapagos",                   card:"Terapagos ex SIR",                  set:"Stellar Crown",         number:"SVI 170", grade:10, date:"12/20/2025", price:275, search:"Terapagos ex 170 Stellar Crown" },
+    { pokemon:"Boost Energy",                card:"Boost Energy Holo",                 set:"Battle Road Promo",     number:"040/P",   grade:10, date:"12/20/2025", price:275, search:null, staticPrice:300 },
+    { pokemon:"Mew",                         card:"Shining Mew",                       set:"Sun & Moon Promos",     number:"SM 40",   grade:10, date:"9/9/2023",   price:160, search:"Shining Mew SM 40" },
+    { pokemon:"Loudred",                     card:"Loudred AR",                        set:"Ancient Roar",          number:"SV4K 078",grade:10, date:"11/29/2025", price:50,  search:"Loudred SV4K 78" },
+    { pokemon:"Dragonite",                   card:"Dragonite-EX",                      set:"Evolutions",            number:"PHF 72",  grade:10, date:"12/28/2025", price:85,  search:"Dragonite-EX PHF 72" },
+    { pokemon:"Mew",                         card:"Mew FA",                            set:"Celebrations",          number:"CEL 25",  grade:10, date:"9/6/2023",   price:132, search:"Mew 25 Celebrations" },
+    { pokemon:"Mew",                         card:"Mew EX",                            set:"Celebrations",          number:"CEL 88",  grade:10, date:"12/22/2025", price:115, search:"Mew ex 88 92" },
+    { pokemon:"Mew",                         card:"Mew Black Star Promo",              set:"WOTC Black Star Promos", number:"BP 8",   grade:10, date:"9/8/2023",   price:57,  search:null, staticPrice:285 },
+    { pokemon:"Psyduck",                     card:"Psyduck 1st Edition",               set:"Team Rocket",           number:"TR 65",   grade:9,  date:"9/6/2023",   price:25,  search:null, staticPrice:35 },
+    { pokemon:"Charizard",                   card:"Charizard-EX",                      set:"Flashfire",             number:"FLF 11",  grade:10, date:"5/1/2026",   price:275, search:"Charizard-EX FLF 11" },
+    { pokemon:"Blastoise",                   card:"M Blastoise-EX",                    set:"Evolutions",            number:"EVS 22",  grade:10, date:"3/4/2026",   price:150, search:"M-Blastoise-EX EVS 22" },
+  ];
+
+  const liveData   = {};
+  let eurToUsd     = 1.08;
+  let activeFilter = 'all';
+  const PROXY      = 'https://pokemon-collection-puce.vercel.app/api/proxy';
+
+  const fmt = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
+
+  function matchFilter(c) {
+    if (activeFilter === 'all')          return true;
+    if (activeFilter === 'mew')          return c.pokemon === 'Mew';
+    if (activeFilter === 'celebrations') return c.set === 'Celebrations';
+    if (activeFilter === 'evolutions')   return c.set === 'Evolutions';
+    if (activeFilter === 'promo')        return c.set.toLowerCase().includes('promo') || c.set.toLowerCase().includes('road');
+    if (activeFilter === 'psa10')        return c.grade === 10;
+    if (activeFilter === 'psa9')         return c.grade === 9;
+    return true;
+  }
+
+  function setFilter(key, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = key;
+    render();
+  }
+
+  async function fetchEurUsd() {
+    try {
+      const res  = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const json = await res.json();
+      if (json?.rates?.USD) eurToUsd = json.rates.USD;
+    } catch { /* use fallback */ }
+  }
+
+  async function fetchCard(idx) {
+    const c = COLLECTION[idx];
+    if (!c.search) return null;
+    try {
+      const res  = await fetch(`${PROXY}?endpoint=cards&search=${encodeURIComponent(c.search)}`);
+      const json = await res.json();
+      return (json.data || [])[0] || null;
+    } catch { return null; }
+  }
+
+  function extractPrice(data, grade) {
+    if (!data) return null;
+    // eBay is already USD
+    const ebay = data?.prices?.ebay?.graded?.psa?.[grade]?.median_price;
+    if (ebay) return ebay;
+    // Cardmarket is EUR — convert
+    const cmKey = `psa${grade}`;
+    const cmEur = data?.prices?.cardmarket?.graded?.psa?.[cmKey];
+    if (cmEur) return cmEur * eurToUsd;
+    return null;
+  }
+
+  function updateCard(idx) {
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (!el) return;
+    const c    = COLLECTION[idx];
+    const live = liveData[idx] || {};
+    const price = c.grade === 10 ? live.psa10 : live.psa9;
+    const diff  = price != null ? price - c.price : null;
+
+    // swap shimmer → image
+    const wrap = el.querySelector('.card-art-wrap');
+    if (wrap && live.image) {
+      wrap.innerHTML = `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`;
+    } else if (wrap && !live.image) {
+      wrap.innerHTML = `<div class="art-placeholder">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a9790" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M7 21v-1a5 5 0 0 1 10 0v1"/>
+        </svg>
+        <span>#${c.number}</span>
+      </div>`;
+    }
+
+    // update "Now" price
+    const nowEl = el.querySelector('.now-val');
+    if (nowEl) {
+      nowEl.textContent = price != null ? fmt(price) : 'N/A';
+      nowEl.className   = 'price-value now-val ' + (diff == null ? 'muted' : diff >= 0 ? 'up' : 'down');
+    }
+  }
+
+  function updateHeaderStats() {
+    let current = 0;
+    let partial = false;
+    COLLECTION.forEach((c, i) => {
+      const live  = liveData[i] || {};
+      const price = c.grade === 10 ? live.psa10 : live.psa9;
+      if (price != null) current += price;
+      else partial = true;
+    });
+    document.getElementById('stat-current').textContent = (partial ? '~' : '') + fmt(current);
+  }
+
+  async function fetchAll() {
+    await fetchEurUsd();
+    await Promise.all(
+      COLLECTION.map(async (c, i) => {
+        const data  = await fetchCard(i);
+        liveData[i] = {
+          image: c.staticImage || data?.image || null,
+          psa10: c.staticPrice  || extractPrice(data, 10),
+          psa9:  c.staticPrice  || extractPrice(data, 9),
+        };
+        updateCard(i);
+        updateHeaderStats();
+      })
+    );
+  }
+
+  function render() {
+    const grid    = document.getElementById('grid');
+    const visible = COLLECTION.map((c,i) => ({c,i})).filter(({c}) => matchFilter(c));
+
+    if (visible.length === 0) {
+      grid.innerHTML = `<div class="empty">No cards match this filter.</div>`;
+    } else {
+      grid.innerHTML = visible.map(({c, i}, vi) => {
+        const live  = liveData[i] || {};
+        const price = c.grade === 10 ? live.psa10 : live.psa9;
+        const diff  = price != null ? price - c.price : null;
+        const nowClass = diff == null ? 'muted' : diff >= 0 ? 'up' : 'down';
+        const nowText  = price != null ? fmt(price) : '…';
+
+        const artHtml = live.image
+          ? `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`
+          : `<div class="art-shimmer"></div>`;
+
+        return `
+        <div class="pcard" data-idx="${i}" style="animation-delay:${vi * 0.045}s">
+          <div class="card-art-wrap">${artHtml}</div>
+          <div class="card-info">
+            <span class="grade-tag grade-${c.grade}">PSA ${c.grade}</span>
+            <div class="card-pokemon">${c.pokemon}</div>
+            <div class="card-sub">${c.card}</div>
+            <div class="card-number">${c.set} · ${c.number}</div>
+            <div class="price-bar">
+              <div class="price-col">
+                <span class="price-label">Bought</span>
+                <span class="price-value">${fmt(c.price)}</span>
+              </div>
+              <div class="price-divider"></div>
+              <div class="price-col right">
+                <span class="price-label">Now</span>
+                <span class="price-value now-val ${nowClass}">${nowText}</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    const visTotal = COLLECTION.filter(matchFilter).reduce((s,c) => s+c.price, 0);
+    document.getElementById('stat-count').textContent   = COLLECTION.length;
+    document.getElementById('stat-total').textContent   = fmt(COLLECTION.reduce((s,c)=>s+c.price,0));
+    document.getElementById('showing').textContent      = visible.length;
+    document.getElementById('footer-total').textContent = fmt(visTotal);
+  }
+
+  render();
+  fetchAll();
+</script>
+</body>
+</html>
