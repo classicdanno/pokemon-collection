@@ -9,7 +9,7 @@ export default async function handler(req, res) {
   }
 
   const qs = new URLSearchParams(params).toString();
-  const url = `https://pokemon-tcg-api.p.rapidapi.com/${endpoint}${qs ? '?' + qs : ''}`;
+  const url = `https://pokemon-tcg-api.p.rapidapi.com/pokemon/${endpoint}${qs ? '?' + qs : ''}`;
 
   try {
     const response = await fetch(url, {
