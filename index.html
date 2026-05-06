@@ -1,0 +1,820 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Collection / PSA 10</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0ede8;
+      --surface: #faf9f7;
+      --card-bg: #ffffff;
+      --border: #e0dbd3;
+      --border-hover: #c5bfb5;
+      --text: #18160f;
+      --muted: #8c8880;
+      --muted2: #b5b0a8;
+      --accent: #9a6f38;
+      --accent-dim: rgba(154,111,56,0.09);
+      --green-up: #0D7E1C;
+      --red-down: #C20812;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+      --shadow: 0 2px 8px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-lg: 0 8px 28px rgba(0,0,0,0.13), 0 2px 6px rgba(0,0,0,0.06);
+      --radius: 10px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 36px 20px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      max-width: 1200px;
+      margin: 0 auto 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.24em;
+      color: var(--muted);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 7px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--muted);
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+
+    .stat-pill strong { color: var(--accent); font-weight: 500; margin-left: 5px; }
+
+    /* ── Filters ── */
+    .filters {
+      max-width: 1200px;
+      margin: 0 auto 20px;
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 2px;
+    }
+
+    .filters::-webkit-scrollbar { display: none; }
+
+    .filter-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--muted);
+      border-radius: 3px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+    .filter-btn.active { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+
+    /* drag hint */
+    .drag-hint {
+      max-width: 1200px;
+      margin: 0 auto 12px;
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.1em;
+      color: var(--muted2);
+      text-align: right;
+      transition: opacity 0.3s;
+    }
+
+    .drag-hint.hidden { opacity: 0; pointer-events: none; }
+
+    /* ── Grid ── */
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      align-items: start;
+    }
+
+    /* ── Card ── */
+    .pcard {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.22s ease, transform 0.22s ease, border-color 0.2s ease, opacity 0.2s ease;
+      animation: fadeUp 0.4s ease both;
+      display: flex;
+      flex-direction: column;
+      cursor: default;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pcard:hover {
+      box-shadow: var(--shadow-lg);
+      transform: translateY(-3px);
+      border-color: var(--border-hover);
+    }
+
+    /* drag states */
+    .pcard.dragging {
+      opacity: 0.45;
+      transform: scale(0.97);
+      box-shadow: none;
+    }
+
+    .pcard.drag-over {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+
+    .pcard.drag-enabled {
+      cursor: grab;
+    }
+
+    .pcard.drag-enabled:active {
+      cursor: grabbing;
+    }
+
+    /* Art */
+    .card-art-wrap {
+      width: 100%;
+      aspect-ratio: 63 / 88;
+      background: linear-gradient(150deg, #edeae4 0%, #ddd9d0 100%);
+      overflow: hidden;
+    }
+
+    .card-art-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      transition: transform 0.4s ease;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .pcard:hover .card-art-wrap img { transform: scale(1.05); }
+    .pcard.dragging .card-art-wrap img { transform: none; }
+
+    .art-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    .art-placeholder svg { opacity: 0.18; }
+
+    .art-placeholder span {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: var(--muted2);
+      letter-spacing: 0.12em;
+    }
+
+    .art-shimmer {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #edeae4 25%, #e3dfd8 50%, #edeae4 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Info block */
+    .card-info {
+      padding: 10px 11px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+
+    .grade-tag {
+      display: inline-flex;
+      align-self: flex-start;
+      font-family: 'DM Mono', monospace;
+      font-size: 8.5px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: 2px;
+      color: #fff;
+      margin-bottom: 4px;
+    }
+
+    .grade-10 { background: #025322; }
+    .grade-9  { background: #086820; }
+    .grade-8  { background: #0D7E1C; }
+    .grade-7  { background: #0C9012; }
+    .grade-6  { background: #0FA50C; }
+
+    .card-pokemon {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.01em;
+      line-height: 1.35;
+      white-space: normal;
+      word-break: break-word;
+    }
+
+    .card-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .card-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      color: var(--muted2);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .price-bar {
+      display: flex;
+      align-items: stretch;
+      justify-content: space-between;
+      margin-top: 10px;
+      padding-top: 9px;
+      border-top: 1px solid var(--border);
+      gap: 8px;
+    }
+
+    .price-col { min-width: 0; flex: 1; }
+    .price-col.right { text-align: right; }
+
+    .price-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--muted2);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .price-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text);
+      display: block;
+    }
+
+    .price-value.up   { color: var(--green-up); }
+    .price-value.down { color: var(--red-down); }
+    .price-value.muted { color: var(--muted2); font-weight: 400; font-size: 10px; }
+
+    .price-divider {
+      width: 1px;
+      background: var(--border);
+      flex-shrink: 0;
+    }
+
+    /* Footer */
+    .footer {
+      max-width: 1200px;
+      margin: 20px auto 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-stat {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .footer-stat strong { color: var(--text); margin-left: 6px; }
+
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .grid { grid-template-columns: repeat(4, 1fr); }
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 24px 14px 60px; }
+
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 14px;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+      }
+
+      h1 { font-size: 24px; }
+
+      .header-stats {
+        width: 100%;
+        gap: 8px;
+      }
+
+      .stat-pill {
+        font-size: 10px;
+        padding: 6px 10px;
+        flex: 1;
+        text-align: center;
+      }
+
+      .grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+      }
+
+      .card-pokemon { font-size: 11px; }
+      .card-sub     { font-size: 9.5px; }
+      .card-number  { font-size: 9px; }
+      .price-value  { font-size: 11px; }
+      .price-label  { font-size: 7.5px; }
+      .card-info    { padding: 9px 10px 10px; }
+
+      .drag-hint { text-align: center; }
+    }
+
+    @media (max-width: 400px) {
+      .stat-pill { font-size: 9px; padding: 5px 8px; }
+      h1 { font-size: 22px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">PSA 10 — English</div>
+    <h1>Collection</h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Cards<strong id="stat-count">—</strong></div>
+    <div class="stat-pill">Invested<strong id="stat-total">—</strong></div>
+    <div class="stat-pill">Current Value<strong id="stat-current">…</strong></div>
+  </div>
+</header>
+
+<div class="filters">
+  <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+  <button class="filter-btn" onclick="setFilter('mew',this)">Mew</button>
+  <button class="filter-btn" onclick="setFilter('celebrations',this)">Celebrations</button>
+  <button class="filter-btn" onclick="setFilter('evolutions',this)">Evolutions</button>
+  <button class="filter-btn" onclick="setFilter('promo',this)">Promos</button>
+  <button class="filter-btn" onclick="setFilter('psa10',this)">PSA 10</button>
+  <button class="filter-btn" onclick="setFilter('psa9',this)">PSA 9</button>
+</div>
+
+<div class="drag-hint" id="drag-hint">Hold & drag to reorder</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <div class="footer-stat">Showing <strong id="showing">—</strong></div>
+  <div class="footer-stat">Total Invested <strong id="footer-total">—</strong></div>
+</div>
+
+<script>
+  const COLLECTION = [
+    { pokemon:"Gengar",                      card:"Gengar-EX",                         set:"Phantom Forces",        number:"PHF 34",  grade:10, date:"12/28/2025", price:450, search:"Gengar-EX PHF 34" },
+    { pokemon:"Moltres & Zapdos & Articuno", card:"Moltres & Zapdos & Articuno-GX FA", set:"SM Black Star Promos",  number:"SM210",   grade:10, date:"12/24/2025", price:275, search:null, staticImage:"https://images.tcggo.com/tcggo/storage/10386/moltres-zapdos-articuno-gx-pr-sm-sm210-sm-black-star-promos-pokemon.png", staticPrice:400 },
+    { pokemon:"Terapagos",                   card:"Terapagos ex SIR",                  set:"Stellar Crown",         number:"SVI 170", grade:10, date:"12/20/2025", price:275, search:"Terapagos ex 170 Stellar Crown" },
+    { pokemon:"Boost Energy",                card:"Boost Energy Holo",                 set:"Battle Road Promo",     number:"040/P",   grade:10, date:"12/20/2025", price:275, search:null, staticPrice:300, staticImage:"https://storage.googleapis.com/images.pricecharting.com/525b569bcdc62527631b887f0a908fd60370682e1e5323bd45b105761e7b5d6a/1600.jpg" },
+    { pokemon:"Mew",                         card:"Shining Mew",                       set:"Sun & Moon Promos",     number:"SM 40",   grade:10, date:"9/9/2023",   price:160, search:"Shining Mew SM 40" },
+    { pokemon:"Loudred",                     card:"Loudred AR",                        set:"Ancient Roar",          number:"SV4K 078",grade:10, date:"11/29/2025", price:50,  search:"Loudred SV4K 78", staticImage:"https://storage.googleapis.com/images.pricecharting.com/95faf51e64d8168e44eba534f48cd802cc9a2b8aeee14d66fad99443b437d12e/1600.jpg" },
+    { pokemon:"Dragonite",                   card:"Dragonite-EX",                      set:"Evolutions",            number:"PHF 72",  grade:10, date:"12/28/2025", price:85,  search:"Dragonite-EX PHF 72" },
+    { pokemon:"Mew",                         card:"Mew FA",                            set:"Celebrations",          number:"CEL 25",  grade:10, date:"9/6/2023",   price:132, search:"Mew 25 Celebrations" },
+    { pokemon:"Mew",                         card:"Mew EX",                            set:"Celebrations",          number:"CEL 88",  grade:10, date:"12/22/2025", price:115, search:"Mew ex 88 92" },
+    { pokemon:"Mew",                         card:"Mew Black Star Promo",              set:"WOTC Black Star Promos", number:"BP 8",   grade:10, date:"9/8/2023",   price:57,  search:null, staticPrice:285, staticImage:"https://images.tcggo.com/tcggo/storage/19522/mew-pr-8-wizards-black-star-promos-pokemon.png" },
+    { pokemon:"Psyduck",                     card:"Psyduck 1st Edition",               set:"Team Rocket",           number:"TR 65",   grade:9,  date:"9/6/2023",   price:25,  search:null, staticPrice:35, staticImage:"https://images.tcggo.com/tcggo/storage/19298/psyduck-tr-65-team-rocket-pokemon.png" },
+    { pokemon:"Charizard",                   card:"Charizard-EX",                      set:"Flashfire",             number:"FLF 11",  grade:10, date:"5/1/2026",   price:275, search:"Charizard-EX FLF 11" },
+    { pokemon:"Blastoise",                   card:"M Blastoise-EX",                    set:"Evolutions",            number:"EVS 22",  grade:10, date:"3/4/2026",   price:150, search:"M-Blastoise-EX EVS 22" },
+  ];
+
+  // ── Order (persisted in localStorage) ──
+  const ORDER_KEY = 'poke-collection-order';
+
+  function loadOrder() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(ORDER_KEY));
+      if (Array.isArray(saved) && saved.length === COLLECTION.length) return saved;
+    } catch {}
+    return COLLECTION.map((_, i) => i);
+  }
+
+  function saveOrder(order) {
+    try { localStorage.setItem(ORDER_KEY, JSON.stringify(order)); } catch {}
+  }
+
+  let cardOrder = loadOrder();
+
+  // ── State ──
+  const liveData   = {};
+  let eurToUsd     = 1.08;
+  let activeFilter = 'all';
+  const PROXY      = 'https://pokemon-collection-puce.vercel.app/api/proxy';
+
+  const fmt = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
+
+  function matchFilter(c) {
+    if (activeFilter === 'all')          return true;
+    if (activeFilter === 'mew')          return c.pokemon === 'Mew';
+    if (activeFilter === 'celebrations') return c.set === 'Celebrations';
+    if (activeFilter === 'evolutions')   return c.set === 'Evolutions';
+    if (activeFilter === 'promo')        return c.set.toLowerCase().includes('promo') || c.set.toLowerCase().includes('road');
+    if (activeFilter === 'psa10')        return c.grade === 10;
+    if (activeFilter === 'psa9')         return c.grade === 9;
+    return true;
+  }
+
+  function setFilter(key, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = key;
+    render();
+  }
+
+  // ── API ──
+  async function fetchEurUsd() {
+    try {
+      const res  = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const json = await res.json();
+      if (json?.rates?.USD) eurToUsd = json.rates.USD;
+    } catch {}
+  }
+
+  async function fetchCard(idx) {
+    const c = COLLECTION[idx];
+    if (!c.search) return null;
+    try {
+      const res  = await fetch(`${PROXY}?endpoint=cards&search=${encodeURIComponent(c.search)}`);
+      const json = await res.json();
+      return (json.data || [])[0] || null;
+    } catch { return null; }
+  }
+
+  function extractPrice(data, grade) {
+    if (!data) return null;
+    const ebay = data?.prices?.ebay?.graded?.psa?.[grade]?.median_price;
+    if (ebay) return ebay;
+    const cmKey = `psa${grade}`;
+    const cmEur = data?.prices?.cardmarket?.graded?.psa?.[cmKey];
+    if (cmEur) return cmEur * eurToUsd;
+    return null;
+  }
+
+  function updateCard(idx) {
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (!el) return;
+    const c    = COLLECTION[idx];
+    const live = liveData[idx] || {};
+    const price = c.grade === 10 ? live.psa10 : live.psa9;
+    const diff  = price != null ? price - c.price : null;
+
+    const wrap = el.querySelector('.card-art-wrap');
+    if (wrap && live.image) {
+      wrap.innerHTML = `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`;
+    } else if (wrap && !live.image) {
+      wrap.innerHTML = `<div class="art-placeholder">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#9a9790" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M7 21v-1a5 5 0 0 1 10 0v1"/>
+        </svg>
+        <span>#${c.number}</span>
+      </div>`;
+    }
+
+    const nowEl = el.querySelector('.now-val');
+    if (nowEl) {
+      nowEl.textContent = price != null ? fmt(price) : 'N/A';
+      nowEl.className   = 'price-value now-val ' + (diff == null ? 'muted' : diff >= 0 ? 'up' : 'down');
+    }
+  }
+
+  function updateHeaderStats() {
+    let current = 0;
+    let partial = false;
+    COLLECTION.forEach((c, i) => {
+      const live  = liveData[i] || {};
+      const price = c.grade === 10 ? live.psa10 : live.psa9;
+      if (price != null) current += price;
+      else partial = true;
+    });
+    document.getElementById('stat-current').textContent = (partial ? '~' : '') + fmt(current);
+  }
+
+  async function fetchAll() {
+    await fetchEurUsd();
+    await Promise.all(
+      COLLECTION.map(async (c, i) => {
+        const data  = await fetchCard(i);
+        liveData[i] = {
+          image: c.staticImage || data?.image || null,
+          psa10: c.staticPrice  || extractPrice(data, 10),
+          psa9:  c.staticPrice  || extractPrice(data, 9),
+        };
+        updateCard(i);
+        updateHeaderStats();
+      })
+    );
+  }
+
+  // ── Render ──
+  function render() {
+    const grid    = document.getElementById('grid');
+    const hint    = document.getElementById('drag-hint');
+    const isAll   = activeFilter === 'all';
+
+    // show drag hint only in All view
+    hint.classList.toggle('hidden', !isAll);
+
+    const ordered = isAll
+      ? cardOrder.map(i => ({ c: COLLECTION[i], i }))
+      : COLLECTION.map((c,i) => ({c,i})).filter(({c}) => matchFilter(c));
+
+    if (ordered.length === 0) {
+      grid.innerHTML = `<div class="empty">No cards match this filter.</div>`;
+    } else {
+      grid.innerHTML = ordered.map(({c, i}, vi) => {
+        const live     = liveData[i] || {};
+        const price    = c.grade === 10 ? live.psa10 : live.psa9;
+        const diff     = price != null ? price - c.price : null;
+        const nowClass = diff == null ? 'muted' : diff >= 0 ? 'up' : 'down';
+        const nowText  = price != null ? fmt(price) : '…';
+
+        const artHtml = live.image
+          ? `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`
+          : `<div class="art-shimmer"></div>`;
+
+        return `
+        <div class="pcard ${isAll ? 'drag-enabled' : ''}" data-idx="${i}" style="animation-delay:${vi * 0.04}s">
+          <div class="card-art-wrap">${artHtml}</div>
+          <div class="card-info">
+            <span class="grade-tag grade-${c.grade}">PSA ${c.grade}</span>
+            <div class="card-pokemon">${c.pokemon}</div>
+            <div class="card-sub">${c.card}</div>
+            <div class="card-number">${c.set} · ${c.number}</div>
+            <div class="price-bar">
+              <div class="price-col">
+                <span class="price-label">Bought</span>
+                <span class="price-value">${fmt(c.price)}</span>
+              </div>
+              <div class="price-divider"></div>
+              <div class="price-col right">
+                <span class="price-label">Now</span>
+                <span class="price-value now-val ${nowClass}">${nowText}</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    }
+
+    const visTotal = COLLECTION.filter(matchFilter).reduce((s,c) => s+c.price, 0);
+    document.getElementById('stat-count').textContent   = COLLECTION.length;
+    document.getElementById('stat-total').textContent   = fmt(COLLECTION.reduce((s,c)=>s+c.price,0));
+    document.getElementById('showing').textContent      = ordered.length;
+    document.getElementById('footer-total').textContent = fmt(visTotal);
+
+    if (isAll) initDrag();
+  }
+
+  // ── Drag & Drop (desktop + touch) ──
+  function initDrag() {
+    const grid  = document.getElementById('grid');
+    const cards = Array.from(grid.querySelectorAll('.pcard'));
+
+    let dragSrc     = null;
+    let dragSrcIdx  = null;
+    let touchCard   = null;
+    let touchTimer  = null;
+    let isDragging  = false;
+    let ghost       = null;
+    let touchOffX   = 0;
+    let touchOffY   = 0;
+
+    // ── Desktop drag ──
+    cards.forEach(card => {
+      card.setAttribute('draggable', 'true');
+
+      card.addEventListener('dragstart', e => {
+        dragSrc    = card;
+        dragSrcIdx = parseInt(card.dataset.idx);
+        setTimeout(() => card.classList.add('dragging'), 0);
+        e.dataTransfer.effectAllowed = 'move';
+      });
+
+      card.addEventListener('dragend', () => {
+        card.classList.remove('dragging');
+        grid.querySelectorAll('.pcard').forEach(c => c.classList.remove('drag-over'));
+        dragSrc = null;
+      });
+
+      card.addEventListener('dragover', e => {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        if (card !== dragSrc) {
+          grid.querySelectorAll('.pcard').forEach(c => c.classList.remove('drag-over'));
+          card.classList.add('drag-over');
+        }
+      });
+
+      card.addEventListener('dragleave', () => card.classList.remove('drag-over'));
+
+      card.addEventListener('drop', e => {
+        e.preventDefault();
+        card.classList.remove('drag-over');
+        if (!dragSrc || card === dragSrc) return;
+
+        const targetIdx = parseInt(card.dataset.idx);
+        const fromPos   = cardOrder.indexOf(dragSrcIdx);
+        const toPos     = cardOrder.indexOf(targetIdx);
+
+        cardOrder.splice(fromPos, 1);
+        cardOrder.splice(toPos, 0, dragSrcIdx);
+        saveOrder(cardOrder);
+        render();
+      });
+    });
+
+    // ── Touch drag (long press) ──
+    cards.forEach(card => {
+      card.addEventListener('touchstart', e => {
+        touchCard = card;
+        touchTimer = setTimeout(() => {
+          isDragging = true;
+          dragSrcIdx = parseInt(card.dataset.idx);
+          card.classList.add('dragging');
+
+          // create ghost
+          const rect = card.getBoundingClientRect();
+          ghost = card.cloneNode(true);
+          ghost.style.cssText = `
+            position:fixed; top:${rect.top}px; left:${rect.left}px;
+            width:${rect.width}px; height:${rect.height}px;
+            opacity:0.85; pointer-events:none; z-index:9999;
+            border-radius:${getComputedStyle(card).borderRadius};
+            box-shadow: 0 12px 32px rgba(0,0,0,0.2);
+            transition: none;
+          `;
+          document.body.appendChild(ghost);
+
+          const touch = e.touches[0];
+          touchOffX = touch.clientX - rect.left;
+          touchOffY = touch.clientY - rect.top;
+        }, 350);
+      }, { passive: true });
+
+      card.addEventListener('touchmove', e => {
+        if (!isDragging) { clearTimeout(touchTimer); return; }
+        e.preventDefault();
+
+        const touch = e.touches[0];
+        const x = touch.clientX - touchOffX;
+        const y = touch.clientY - touchOffY;
+        ghost.style.left = x + 'px';
+        ghost.style.top  = y + 'px';
+
+        // find card under finger
+        ghost.style.display = 'none';
+        const under = document.elementFromPoint(touch.clientX, touch.clientY);
+        ghost.style.display = '';
+
+        const targetCard = under?.closest('.pcard');
+        grid.querySelectorAll('.pcard').forEach(c => c.classList.remove('drag-over'));
+        if (targetCard && targetCard !== touchCard) {
+          targetCard.classList.add('drag-over');
+        }
+      }, { passive: false });
+
+      card.addEventListener('touchend', e => {
+        clearTimeout(touchTimer);
+        if (!isDragging) { touchCard = null; return; }
+
+        isDragging = false;
+        if (ghost) { ghost.remove(); ghost = null; }
+        grid.querySelectorAll('.pcard').forEach(c => {
+          c.classList.remove('dragging', 'drag-over');
+        });
+
+        const touch = e.changedTouches[0];
+        const under = document.elementFromPoint(touch.clientX, touch.clientY);
+        const targetCard = under?.closest('.pcard');
+
+        if (targetCard && targetCard !== touchCard) {
+          const targetIdx = parseInt(targetCard.dataset.idx);
+          const fromPos   = cardOrder.indexOf(dragSrcIdx);
+          const toPos     = cardOrder.indexOf(targetIdx);
+          cardOrder.splice(fromPos, 1);
+          cardOrder.splice(toPos, 0, dragSrcIdx);
+          saveOrder(cardOrder);
+          render();
+        }
+
+        touchCard = null;
+      });
+
+      card.addEventListener('touchcancel', () => {
+        clearTimeout(touchTimer);
+        isDragging = false;
+        if (ghost) { ghost.remove(); ghost = null; }
+        grid.querySelectorAll('.pcard').forEach(c => c.classList.remove('dragging', 'drag-over'));
+        touchCard = null;
+      });
+    });
+  }
+
+  render();
+  fetchAll();
+</script>
+</body>
+</html>
