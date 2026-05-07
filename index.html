@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Collection / PSA 10</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #1e1e1e;
+      --card:        #121212;
+      --surface:     #2a2a2a;
+      --border:      #333333;
+      --border-hover:#484848;
+      --text:        #f0ede8;
+      --text-dim:    #a8a49e;
+      --text-dimmer: #6a6660;
+      --card-text:   #ffffff;
+      --card-sub:    #a0a0a0;
+      --card-dimmer: #666666;
+      --active-bg:   #f0ede8;
+      --active-text: #121212;
+      --green-up:    #3BBD2E;
+      --green-dim:   rgba(59,189,46,0.12);
+      --red-down:    #E23939;
+      --red-dim:     rgba(226,57,57,0.10);
+      --shadow:      0 2px 12px rgba(0,0,0,0.4), 0 1px 3px rgba(0,0,0,0.3);
+      --shadow-lg:   0 12px 40px rgba(0,0,0,0.6), 0 4px 12px rgba(0,0,0,0.4);
+      --radius:      14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-weight: 300;
+      min-height: 100vh;
+      padding: 36px 20px 80px;
+    }
+
+    /* ── Header ── */
+    header {
+      max-width: 1200px;
+      margin: 0 auto 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      padding-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .eyebrow {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.24em;
+      color: var(--text-dimmer);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    h1 {
+      font-family: 'DM Mono', monospace;
+      font-size: 28px;
+      font-weight: 400;
+      letter-spacing: -0.03em;
+      color: var(--text);
+      line-height: 1;
+    }
+
+    .header-stats {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .stat-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 7px 12px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .stat-pill strong {
+      color: var(--text);
+      font-weight: 500;
+      margin-left: 5px;
+    }
+
+    .profit-pill {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      padding: 7px 12px;
+      border-radius: 6px;
+      white-space: nowrap;
+      font-weight: 500;
+      border: 1px solid transparent;
+    }
+
+    .profit-pill.up {
+      background: var(--green-dim);
+      color: var(--green-up);
+      border-color: rgba(59,189,46,0.25);
+    }
+
+    .profit-pill.down {
+      background: var(--red-dim);
+      color: var(--red-down);
+      border-color: rgba(226,57,57,0.2);
+    }
+
+    .profit-pill.neutral {
+      background: var(--surface);
+      color: var(--text-dimmer);
+      border-color: var(--border);
+    }
+
+    /* ── Filter + sort row ── */
+    .controls-row {
+      max-width: 1200px;
+      margin: 0 auto 20px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* filter buttons scroll left */
+    .filter-scroll {
+      display: flex;
+      gap: 6px;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      flex: 1;
+      min-width: 0;
+    }
+
+    .filter-scroll::-webkit-scrollbar { display: none; }
+
+    .filter-btn {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      flex-shrink: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .filter-btn:hover { border-color: var(--border-hover); color: var(--text); }
+
+    .filter-btn.active {
+      background: var(--active-bg);
+      color: var(--active-text);
+      border-color: var(--active-bg);
+      font-weight: 500;
+    }
+
+    /* Sort dropdown — pinned to right */
+    .sort-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+
+    .sort-trigger {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+      color: var(--text-dim);
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      -webkit-tap-highlight-color: transparent;
+      transition: all 0.15s ease;
+      user-select: none;
+    }
+
+    .sort-trigger:hover { border-color: var(--border-hover); color: var(--text); }
+    .sort-trigger.open  { border-color: var(--active-bg); color: var(--text); }
+
+    .sort-trigger .sort-current { color: var(--text); font-weight: 500; }
+
+    .sort-chevron {
+      width: 10px;
+      height: 10px;
+      transition: transform 0.2s ease;
+      flex-shrink: 0;
+    }
+
+    .sort-trigger.open .sort-chevron { transform: rotate(180deg); }
+
+    .sort-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      right: 0;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+      z-index: 100;
+      min-width: 140px;
+      display: none;
+    }
+
+    .sort-dropdown.open { display: block; }
+
+    .sort-option {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 11px 16px;
+      cursor: pointer;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      transition: background 0.1s, color 0.1s;
+      border-bottom: 1px solid var(--border);
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sort-option:last-child { border-bottom: none; }
+    .sort-option:hover { background: rgba(255,255,255,0.05); color: var(--text); }
+
+    .sort-option.active {
+      color: var(--green-up);
+      background: var(--green-dim);
+    }
+
+    .sort-check {
+      width: 14px;
+      height: 14px;
+      opacity: 0;
+      flex-shrink: 0;
+    }
+
+    .sort-option.active .sort-check { opacity: 1; }
+
+    /* ── Grid ── */
+    .grid {
+      max-width: 1200px;
+      margin: 0 auto;
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 12px;
+      align-items: stretch; /* all cells same height */
+    }
+
+    /* ── Card — uniform height ── */
+    .pcard {
+      background: var(--card);
+      border-radius: var(--radius);
+      overflow: visible; /* allow badge to bleed out */
+      box-shadow: var(--shadow);
+      transition: box-shadow 0.22s ease, transform 0.22s ease;
+      animation: fadeUp 0.4s ease both;
+      display: flex;
+      flex-direction: column;
+      height: 100%; /* stretch to fill grid cell */
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* clip overflow at the card level except for the badge area */
+    .pcard-inner {
+      border-radius: var(--radius);
+      overflow: hidden;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .pcard:hover { transform: scale(1.04); box-shadow: var(--shadow); }
+
+    /* Art frame — padded inside card shell so #121212 shows around it */
+    .card-art-outer {
+      padding: 10px 10px 0 10px;
+      background: var(--card);
+      position: relative;
+    }
+
+    .card-art-wrap {
+      width: 100%;
+      aspect-ratio: 63 / 88;
+      background: #1a1a1a;
+      overflow: hidden;
+      position: relative;
+      border-radius: 8px; /* inner frame rounded */
+    }
+
+    .card-art-wrap img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      transition: transform 0.4s ease;
+      pointer-events: none;
+      user-select: none;
+      -webkit-user-drag: none;
+    }
+
+    .pcard:hover .card-art-wrap img { transform: scale(1.04); }
+
+    /* PSA badge — left-aligned with text, straddling art/info boundary */
+    .grade-badge-wrap {
+      display: flex;
+      justify-content: flex-start;
+      padding-left: 18px;
+      position: relative;
+      z-index: 3;
+      margin-top: -13px;
+      margin-bottom: 10px;
+    }
+
+    .grade-badge {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 4px;
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+    }
+
+    .grade-10 { background: #025322; }
+    .grade-9  { background: #086820; }
+    .grade-8  { background: #0D7E1C; }
+    .grade-7  { background: #0C9012; }
+
+    /* Art loading states */
+    .art-placeholder {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      background: #1a1a1a;
+    }
+
+    .art-placeholder svg { opacity: 0.15; }
+
+    .art-placeholder span {
+      font-family: 'DM Mono', monospace;
+      font-size: 9px;
+      color: #444;
+      letter-spacing: 0.12em;
+    }
+
+    .art-shimmer {
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Info block — fixed height for uniformity */
+    .card-info {
+      padding: 0 18px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      flex: 1;
+    }
+
+    .card-pokemon {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--card-text);
+      letter-spacing: -0.02em;
+      line-height: 1.25;
+      white-space: normal;
+      word-break: break-word;
+      margin-bottom: 4px;
+    }
+
+    .card-sub {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--card-sub);
+      white-space: normal;
+      word-break: break-word;
+      line-height: 1.4;
+    }
+
+    .card-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      color: var(--card-dimmer);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Price bar — no divider */
+    .price-bar {
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      margin-top: auto;
+      padding-top: 14px;
+    }
+
+    .price-col { min-width: 0; }
+    .price-col.right { text-align: right; }
+
+    .price-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 8px;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      color: var(--card-dimmer);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .price-value {
+      font-family: 'DM Mono', monospace;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--card-text);
+      display: block;
+    }
+
+    .price-value.up   { color: var(--green-up); }
+    .price-value.down { color: var(--red-down); }
+    .price-value.muted { color: var(--card-dimmer); font-weight: 400; font-size: 11px; }
+
+    /* ── Footer ── */
+    .footer {
+      max-width: 1200px;
+      margin: 20px auto 0;
+      display: flex;
+      justify-content: flex-end;
+      gap: 20px;
+      padding-top: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .footer-stat {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      color: var(--text-dimmer);
+    }
+
+    .footer-stat strong { color: var(--text-dim); margin-left: 6px; }
+
+    .empty {
+      grid-column: 1/-1;
+      text-align: center;
+      padding: 60px;
+      font-family: 'DM Mono', monospace;
+      font-size: 12px;
+      color: var(--text-dimmer);
+      letter-spacing: 0.1em;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) { .grid { grid-template-columns: repeat(4, 1fr); } }
+
+    @media (max-width: 768px) {
+      body { padding: 20px 12px 60px; }
+
+      header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+      }
+
+      h1 { font-size: 22px; }
+
+      .header-stats { width: 100%; gap: 6px; }
+
+      .stat-pill, .profit-pill {
+        font-size: 10px;
+        padding: 6px 9px;
+        flex: 1;
+        text-align: center;
+      }
+
+      .grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+
+      .card-info    { padding: 0 13px 14px; }
+      .card-pokemon { font-size: 14px; }
+      .card-sub     { font-size: 9.5px; }
+      .card-number  { font-size: 9px; }
+      .price-value  { font-size: 11.5px; }
+      .price-label  { font-size: 7.5px; }
+      .grade-badge  { font-size: 8.5px; padding: 3px 9px; }
+      .grade-badge-wrap { padding-left: 13px; }
+      .card-art-outer { padding: 8px 8px 0 8px; }
+    }
+
+    @media (max-width: 400px) {
+      .stat-pill, .profit-pill { font-size: 9px; padding: 5px 7px; }
+      h1 { font-size: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div>
+    <div class="eyebrow">PSA 10 — English</div>
+    <h1>Collection</h1>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Cards<strong id="stat-count">—</strong></div>
+    <div class="stat-pill">Invested<strong id="stat-total">—</strong></div>
+    <div class="stat-pill">Value<strong id="stat-current">…</strong></div>
+    <div class="profit-pill neutral" id="profit-pill">Profit —</div>
+  </div>
+</header>
+
+<!-- Controls: filters left, sort dropdown right -->
+<div class="controls-row">
+  <div class="filter-scroll">
+    <button class="filter-btn active" onclick="setFilter('all',this)">All</button>
+    <button class="filter-btn" onclick="setFilter('mew',this)">Mew</button>
+    <button class="filter-btn" onclick="setFilter('celebrations',this)">Celebrations</button>
+    <button class="filter-btn" onclick="setFilter('evolutions',this)">Evolutions</button>
+    <button class="filter-btn" onclick="setFilter('promo',this)">Promos</button>
+    <button class="filter-btn" onclick="setFilter('psa10',this)">PSA 10</button>
+    <button class="filter-btn" onclick="setFilter('psa9',this)">PSA 9</button>
+  </div>
+
+  <div class="sort-wrap" id="sort-wrap">
+    <div class="sort-trigger" id="sort-trigger" onclick="toggleSort()">
+      Sort <span class="sort-current" id="sort-label">All</span>
+      <svg class="sort-chevron" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="2,3 5,7 8,3"/>
+      </svg>
+    </div>
+    <div class="sort-dropdown" id="sort-dropdown">
+      <div class="sort-option active" onclick="setSort('default','All',this)">
+        All
+        <svg class="sort-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,7 5.5,10.5 12,3"/>
+        </svg>
+      </div>
+      <div class="sort-option" onclick="setSort('value','Value',this)">
+        Value
+        <svg class="sort-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,7 5.5,10.5 12,3"/>
+        </svg>
+      </div>
+      <div class="sort-option" onclick="setSort('gain','Gain',this)">
+        Gain
+        <svg class="sort-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,7 5.5,10.5 12,3"/>
+        </svg>
+      </div>
+      <div class="sort-option" onclick="setSort('loss','Loss',this)">
+        Loss
+        <svg class="sort-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,7 5.5,10.5 12,3"/>
+        </svg>
+      </div>
+      <div class="sort-option" onclick="setSort('grade','Grade',this)">
+        Grade
+        <svg class="sort-check" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="2,7 5.5,10.5 12,3"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="grid" id="grid"></div>
+
+<div class="footer">
+  <div class="footer-stat">Showing <strong id="showing">—</strong></div>
+  <div class="footer-stat">Total Invested <strong id="footer-total">—</strong></div>
+</div>
+
+<script>
+  const COLLECTION = [
+    { pokemon:"Gengar",                      card:"Gengar-EX",                         set:"Phantom Forces",        number:"PHF 34",  grade:10, date:"12/28/2025", price:450,  search:"Gengar-EX PHF 34",            cardCode:"PHF 34"  },
+    { pokemon:"Moltres & Zapdos & Articuno", card:"Moltres & Zapdos & Articuno-GX FA", set:"SM Black Star Promos",  number:"SM210",   grade:10, date:"12/24/2025", price:275,  search:null, staticImage:"https://images.tcggo.com/tcggo/storage/10386/moltres-zapdos-articuno-gx-pr-sm-sm210-sm-black-star-promos-pokemon.png", staticPrice:400 },
+    { pokemon:"Terapagos",                   card:"Terapagos ex SIR",                  set:"Stellar Crown",         number:"SCR 170", grade:10, date:"12/20/2025", price:275,  search:"Terapagos ex 170 Stellar Crown", cardCode:"SCR 170" },
+    { pokemon:"Boost Energy",                card:"Boost Energy Holo",                 set:"Battle Road Promo",     number:"040/P",   grade:10, date:"12/20/2025", price:275,  search:null, staticPrice:300, staticImage:"https://storage.googleapis.com/images.pricecharting.com/525b569bcdc62527631b887f0a908fd60370682e1e5323bd45b105761e7b5d6a/1600.jpg" },
+    { pokemon:"Mew",                         card:"Shining Mew",                       set:"Shining Legends",       number:"SLG 40",  grade:10, date:"9/9/2023",   price:160,  search:"Shining Mew 40",               cardCode:"SLG 40"  },
+    { pokemon:"Loudred",                     card:"Loudred AR",                        set:"Ancient Roar",          number:"SV4K 078",grade:10, date:"11/29/2025", price:50,   search:"Loudred SV4K 78", staticImage:"https://storage.googleapis.com/images.pricecharting.com/95faf51e64d8168e44eba534f48cd802cc9a2b8aeee14d66fad99443b437d12e/1600.jpg" },
+    { pokemon:"Dragonite",                   card:"Dragonite-EX",                      set:"Evolutions",            number:"EVO 72",  grade:10, date:"12/28/2025", price:85,   search:"Dragonite EX Evolutions 72",   cardCode:"EVO 72"  },
+    { pokemon:"Mew",                         card:"Mew FA",                            set:"Celebrations",          number:"CEL 25",  grade:10, date:"9/6/2023",   price:132,  search:"Mew 25 Celebrations",          cardCode:"CEL 25"  },
+    { pokemon:"Mew",                         card:"Mew EX",                            set:"Celebrations",          number:"CEL 88",  grade:10, date:"12/22/2025", price:115,  search:"Mew ex 88 Celebrations",       cardCode:"CEL 88"  },
+    { pokemon:"Mew",                         card:"Mew Black Star Promo",              set:"WOTC Black Star Promos", number:"PR 8",   grade:10, date:"9/8/2023",   price:57,   search:null, staticPrice:285, staticImage:"https://images.tcggo.com/tcggo/storage/19522/mew-pr-8-wizards-black-star-promos-pokemon.png" },
+    { pokemon:"Psyduck",                     card:"Psyduck 1st Edition",               set:"Team Rocket",           number:"TR 65",   grade:9,  date:"9/6/2023",   price:25,   search:null, staticPrice:35, staticImage:"https://images.tcggo.com/tcggo/storage/19298/psyduck-tr-65-team-rocket-pokemon.png" },
+    { pokemon:"Charizard",                   card:"Charizard-EX",                      set:"Flashfire",             number:"FLF 11",  grade:10, date:"5/1/2026",   price:275,  search:"Charizard-EX FLF 11",          cardCode:"FLF 11"  },
+    { pokemon:"Blastoise",                   card:"M Blastoise-EX",                    set:"Evolutions",            number:"EVO 22",  grade:10, date:"3/4/2026",   price:150,  search:"M Blastoise EX Evolutions 22", cardCode:"EVO 22"  },
+  ];
+
+  const liveData   = {};
+  let eurToUsd     = 1.08;
+  let activeFilter = 'all';
+  let activeSort   = 'default';
+  const PROXY      = 'https://pokemon-collection-puce.vercel.app/api/proxy';
+
+  const fmt = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
+
+  // ── Sort dropdown ──
+  function toggleSort() {
+    const trigger  = document.getElementById('sort-trigger');
+    const dropdown = document.getElementById('sort-dropdown');
+    const isOpen   = dropdown.classList.contains('open');
+    dropdown.classList.toggle('open', !isOpen);
+    trigger.classList.toggle('open', !isOpen);
+  }
+
+  function setSort(key, label, el) {
+    activeSort = key;
+    document.getElementById('sort-label').textContent = label;
+    document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('sort-dropdown').classList.remove('open');
+    document.getElementById('sort-trigger').classList.remove('open');
+    render();
+  }
+
+  // close dropdown on outside click
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('sort-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('sort-dropdown')?.classList.remove('open');
+      document.getElementById('sort-trigger')?.classList.remove('open');
+    }
+  });
+
+  // ── Filter ──
+  function matchFilter(c) {
+    if (activeFilter === 'all')          return true;
+    if (activeFilter === 'mew')          return c.pokemon === 'Mew';
+    if (activeFilter === 'celebrations') return c.set === 'Celebrations';
+    if (activeFilter === 'evolutions')   return c.set === 'Evolutions';
+    if (activeFilter === 'promo')        return c.set.toLowerCase().includes('promo') || c.set.toLowerCase().includes('road');
+    if (activeFilter === 'psa10')        return c.grade === 10;
+    if (activeFilter === 'psa9')         return c.grade === 9;
+    return true;
+  }
+
+  function setFilter(key, btn) {
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeFilter = key;
+    render();
+  }
+
+  // ── Sort logic ──
+  function getLivePrice(i) {
+    const c    = COLLECTION[i];
+    const live = liveData[i] || {};
+    return c.grade === 10 ? live.psa10 : live.psa9;
+  }
+
+  function applySort(pairs) {
+    if (activeSort === 'default') return pairs;
+    return [...pairs].sort((a, b) => {
+      const pa = getLivePrice(a.i);
+      const pb = getLivePrice(b.i);
+      if (activeSort === 'value') return (pb ?? -Infinity) - (pa ?? -Infinity);
+      if (activeSort === 'gain') {
+        const da = pa != null ? pa - a.c.price : -Infinity;
+        const db = pb != null ? pb - b.c.price : -Infinity;
+        return db - da;
+      }
+      if (activeSort === 'loss') {
+        const da = pa != null ? pa - a.c.price : Infinity;
+        const db = pb != null ? pb - b.c.price : Infinity;
+        return da - db;
+      }
+      if (activeSort === 'grade') return b.c.grade - a.c.grade;
+      return 0;
+    });
+  }
+
+  // ── API ──
+  async function fetchEurUsd() {
+    try {
+      const res  = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const json = await res.json();
+      if (json?.rates?.USD) eurToUsd = json.rates.USD;
+    } catch {}
+  }
+
+  async function fetchCard(idx) {
+    const c = COLLECTION[idx];
+    if (!c.search) return null;
+    try {
+      const res  = await fetch(`${PROXY}?endpoint=cards&search=${encodeURIComponent(c.search)}`);
+      const json = await res.json();
+      const results = json.data || [];
+      // Match by exact card_code_number if we have one, otherwise take first result
+      if (c.cardCode) {
+        const match = results.find(r => r.card_code_number === c.cardCode);
+        return match || results[0] || null;
+      }
+      return results[0] || null;
+    } catch { return null; }
+  }
+
+  function extractPrice(data, grade) {
+    if (!data) return null;
+    const ebay = data?.prices?.ebay?.graded?.psa?.[grade]?.median_price;
+    if (ebay) return ebay;
+    const cmKey = `psa${grade}`;
+    const cmEur = data?.prices?.cardmarket?.graded?.psa?.[cmKey];
+    if (cmEur) return cmEur * eurToUsd;
+    return null;
+  }
+
+  // ── Shimmer timeout ──
+  function startShimmerTimeout(idx) {
+    setTimeout(() => {
+      const el = document.querySelector(`[data-idx="${idx}"] .art-shimmer`);
+      if (!el) return;
+      const c = COLLECTION[idx];
+      el.outerHTML = `<div class="art-placeholder">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M7 21v-1a5 5 0 0 1 10 0v1"/>
+        </svg>
+        <span>#${c.number}</span>
+      </div>`;
+    }, 8000);
+  }
+
+  // ── Update single card in DOM ──
+  function updateCard(idx) {
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (!el) return;
+    const c     = COLLECTION[idx];
+    const live  = liveData[idx] || {};
+    const price = c.grade === 10 ? live.psa10 : live.psa9;
+    const diff  = price != null ? price - c.price : null;
+
+    const wrap = el.querySelector('.card-art-wrap');
+    if (wrap && live.image) {
+      wrap.innerHTML = `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`;
+    } else if (wrap && !live.image) {
+      wrap.innerHTML = `<div class="art-placeholder">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#444" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/>
+          <circle cx="12" cy="10" r="3"/>
+          <path d="M7 21v-1a5 5 0 0 1 10 0v1"/>
+        </svg>
+        <span>#${c.number}</span>
+      </div>`;
+    }
+
+    const nowEl = el.querySelector('.now-val');
+    if (nowEl) {
+      nowEl.textContent = price != null ? fmt(price) : 'N/A';
+      nowEl.className   = 'price-value now-val ' + (diff == null ? 'muted' : diff >= 0 ? 'up' : 'down');
+    }
+  }
+
+  // ── Update header profit — uses whatever prices are loaded ──
+  function updateHeaderStats() {
+    let current  = 0;
+    let invested = 0;
+    let priceCount = 0;
+
+    COLLECTION.forEach((c, i) => {
+      invested += c.price;
+      const price = getLivePrice(i);
+      if (price != null) { current += price; priceCount++; }
+    });
+
+    document.getElementById('stat-current').textContent = priceCount > 0 ? fmt(current) : '…';
+    document.getElementById('stat-total').textContent   = fmt(invested);
+    document.getElementById('stat-count').textContent   = COLLECTION.length;
+
+    if (priceCount === 0) {
+      document.getElementById('profit-pill').textContent = 'Profit —';
+      document.getElementById('profit-pill').className   = 'profit-pill neutral';
+      return;
+    }
+
+    // Calculate profit only from cards that have prices
+    const partialInvested = COLLECTION.reduce((s, c, i) => {
+      return getLivePrice(i) != null ? s + c.price : s;
+    }, 0);
+
+    const profit = current - partialInvested;
+    const pct    = partialInvested > 0 ? ((profit / partialInvested) * 100).toFixed(1) : null;
+    const sign   = profit >= 0 ? '+' : '';
+    const pill   = document.getElementById('profit-pill');
+    pill.textContent = `Profit ${sign}${fmt(profit)}${pct ? ` (${sign}${pct}%)` : ''}`;
+    pill.className   = `profit-pill ${profit >= 0 ? 'up' : 'down'}`;
+  }
+
+  async function fetchAll() {
+    await fetchEurUsd();
+    await Promise.all(
+      COLLECTION.map(async (c, i) => {
+        const data  = await fetchCard(i);
+        liveData[i] = {
+          image: c.staticImage || data?.image || null,
+          psa10: c.staticPrice  || extractPrice(data, 10),
+          psa9:  c.staticPrice  || extractPrice(data, 9),
+        };
+        updateCard(i);
+        updateHeaderStats();
+        if (activeSort !== 'default') render();
+      })
+    );
+  }
+
+  // ── Main render ──
+  function render() {
+    const grid = document.getElementById('grid');
+    let pairs  = COLLECTION.map((c,i) => ({c,i})).filter(({c}) => matchFilter(c));
+    pairs      = applySort(pairs);
+
+    if (pairs.length === 0) {
+      grid.innerHTML = `<div class="empty">No cards match this filter.</div>`;
+    } else {
+      grid.innerHTML = pairs.map(({c, i}, vi) => {
+        const live     = liveData[i] || {};
+        const price    = c.grade === 10 ? live.psa10 : live.psa9;
+        const diff     = price != null ? price - c.price : null;
+        const nowClass = diff == null ? 'muted' : diff >= 0 ? 'up' : 'down';
+        const nowText  = price != null ? fmt(price) : '…';
+
+        const artHtml = live.image
+          ? `<img src="${live.image}" alt="${c.card}" loading="lazy"/>`
+          : `<div class="art-shimmer"></div>`;
+
+        return `
+        <div class="pcard" data-idx="${i}" style="animation-delay:${vi * 0.04}s">
+          <div class="pcard-inner">
+            <div class="card-art-outer">
+              <div class="card-art-wrap">${artHtml}</div>
+            </div>
+            <div class="grade-badge-wrap">
+              <span class="grade-badge grade-${c.grade}">PSA ${c.grade}</span>
+            </div>
+            <div class="card-info">
+              <div class="card-pokemon">${c.pokemon}</div>
+              <div class="card-sub">${c.card}</div>
+              <div class="card-number">${c.set} · ${c.number}</div>
+              <div class="price-bar">
+                <div class="price-col">
+                  <span class="price-label">Bought</span>
+                  <span class="price-value">${fmt(c.price)}</span>
+                </div>
+                <div class="price-col right">
+                  <span class="price-label">Now</span>
+                  <span class="price-value now-val ${nowClass}">${nowText}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+
+      pairs.forEach(({i}) => {
+        if (!liveData[i]?.image) startShimmerTimeout(i);
+      });
+    }
+
+    const visTotal = COLLECTION.filter(matchFilter).reduce((s,c) => s+c.price, 0);
+    document.getElementById('showing').textContent      = pairs.length;
+    document.getElementById('footer-total').textContent = fmt(visTotal);
+    updateHeaderStats();
+  }
+
+  render();
+  fetchAll();
+</script>
+</body>
+</html>
