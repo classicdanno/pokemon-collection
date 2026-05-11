@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Collection</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@300;400;500&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #f8f8f6;
+      --card-w:       220px;
+      --card-h:       308px;
+      --shelf-w:      82px;
+      --shelf-h:      115px;
+      --gap:          24px;
+      --radius:       16px;
+      --art-radius:   8px;
+      --lift:         -28px;
+      --flip-dur:     0.55s;
+      --back-bg:      #f2f0eb;
+      --dark:         #121212;
+      --sub:          #666;
+      --dimmer:       #999;
+      --green:        #0D7E1C;
+      --red:          #C20812;
+      --shadow:       0 8px 32px rgba(0,0,0,0.13), 0 2px 8px rgba(0,0,0,0.08);
+      --shadow-hover: 0 24px 56px rgba(0,0,0,0.18), 0 8px 20px rgba(0,0,0,0.10);
+    }
+
+    html, body { height: 100%; }
+
+    body {
+      background: var(--bg);
+      font-family: 'DM Sans', sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+      user-select: none;
+      padding: 48px 0;
+    }
+
+    /* wrapper that groups carousel + shelf and centers them together */
+    .carousel-group {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px; /* tight gap — shadow still has room above this */
+    }
+
+    /* ── Top pill label ── */
+    .top-pill {
+      background: rgba(255,255,255,0.85);
+      border: 1px solid rgba(0,0,0,0.08);
+      border-radius: var(--art-radius);
+      padding: 10px 20px;
+      margin-bottom: 32px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+      text-align: center;
+    }
+
+    .top-pill p {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 0.06em;
+      color: #888;
+      line-height: 1.5;
+    }
+
+    /* ── Sort row ── */
+    .sort-row {
+      display: none;
+    }
+
+    .sort-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #aaa;
+    }
+
+    .sort-wrap { position: relative; }
+
+    .sort-trigger {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      padding: 8px 14px;
+      border: 1px solid #ddd;
+      background: #fff;
+      color: #555;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: border-color 0.15s, color 0.15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sort-trigger:hover { border-color: #bbb; color: #222; }
+    .sort-trigger.open  { border-color: #222; color: #222; }
+    .sort-current { font-weight: 500; color: #222; }
+
+    .sort-chevron { width: 10px; height: 10px; transition: transform 0.2s ease; }
+    .sort-trigger.open .sort-chevron { transform: rotate(180deg); }
+
+    .sort-dropdown {
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      background: #fff;
+      border: 1px solid #e0e0e0;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+      z-index: 200;
+      min-width: 130px;
+      display: none;
+    }
+
+    .sort-dropdown.open { display: block; }
+
+    .sort-option {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 11px 16px;
+      cursor: pointer;
+      color: #666;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      border-bottom: 1px solid #f0f0f0;
+      transition: background 0.1s;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .sort-option:last-child { border-bottom: none; }
+    .sort-option:hover { background: #f8f8f6; color: #222; }
+    .sort-option.active { color: var(--green); font-weight: 500; }
+    .sort-check { width: 12px; height: 12px; opacity: 0; }
+    .sort-option.active .sort-check { opacity: 1; }
+
+    /* ── Carousel stage ── */
+    .stage {
+      position: relative;
+      width: 100vw;
+      overflow-x: hidden;
+      overflow-y: visible;
+      padding-bottom: 20px; /* room for shadow before shelf */
+    }
+
+    .stage::before, .stage::after {
+      content: '';
+      position: absolute;
+      top: 0; bottom: 0;
+      width: 160px;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    .stage::before { left: 0; background: linear-gradient(to right, var(--bg), transparent); }
+    .stage::after  { right: 0; background: linear-gradient(to left,  var(--bg), transparent); }
+
+    .track {
+      display: flex;
+      gap: var(--gap);
+      padding: 60px 200px 100px;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      cursor: grab;
+    }
+
+    .track::-webkit-scrollbar { display: none; }
+    .track.dragging { cursor: grabbing; scroll-snap-type: none; }
+
+    /* ── Card scene ── */
+    .card-scene {
+      flex-shrink: 0;
+      width: var(--card-w);
+      height: var(--card-h);
+      perspective: 1000px;
+      scroll-snap-align: center;
+      position: relative;
+      z-index: 1;
+      transition: z-index 0s;
+    }
+
+    .card-scene:hover { z-index: 10; }
+
+    .card-inner {
+      width: 100%;
+      height: 100%;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform var(--flip-dur) cubic-bezier(0.4,0,0.2,1);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .card-scene:not(.flipped):hover .card-inner {
+      transform: translateY(var(--lift));
+      box-shadow: var(--shadow-hover);
+    }
+
+    .card-scene.flipped .card-inner {
+      transform: rotateY(180deg);
+      box-shadow: var(--shadow-hover);
+    }
+
+    /* highlight pulse when scrolled-to */
+    .card-scene.highlight .card-inner {
+      outline: 2px solid rgba(13,126,28,0.5);
+      outline-offset: 3px;
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: var(--radius);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      overflow: hidden;
+    }
+
+    .card-front { background: #1a1a1a; cursor: grab; }
+    .card-front:active { cursor: grabbing; }
+
+    .card-front img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      pointer-events: none;
+    }
+
+    .card-front-placeholder {
+      width: 100%; height: 100%;
+      background: linear-gradient(145deg, #1e1e1e, #141414);
+    }
+
+    .shimmer {
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, #1a1a1a 25%, #242424 50%, #1a1a1a 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0%   { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .card-back {
+      background: var(--back-bg);
+      transform: rotateY(180deg);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      padding: 18px 16px 16px;
+    }
+
+    .back-grade {
+      display: inline-flex;
+      align-self: flex-start;
+      font-family: 'DM Mono', monospace;
+      font-size: 8px;
+      font-weight: 500;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      padding: 3px 8px;
+      border-radius: 3px;
+      color: #fff;
+      margin-bottom: 10px;
+    }
+
+    .grade-10 { background: #025322; }
+    .grade-9  { background: #086820; }
+    .grade-8  { background: #0D7E1C; }
+    .grade-7  { background: #0C9012; }
+
+    .back-pokemon {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 17px;
+      font-weight: 600;
+      color: var(--dark);
+      line-height: 1.2;
+      margin-bottom: 6px;
+      word-break: break-word;
+    }
+
+    .back-card-name {
+      font-family: 'DM Mono', monospace;
+      font-size: 10px;
+      color: var(--sub);
+      line-height: 1.4;
+      word-break: break-word;
+    }
+
+    .back-set {
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      color: var(--dimmer);
+      margin-top: 2px;
+    }
+
+    .back-divider {
+      height: 1px;
+      background: #e0ddd7;
+      margin: auto 0 12px;
+    }
+
+    .back-prices { display: flex; justify-content: space-between; align-items: flex-end; }
+    .back-price-col.right { text-align: right; }
+
+    .back-price-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 7.5px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--dimmer);
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .back-price-val {
+      font-family: 'DM Mono', monospace;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--dark);
+      display: block;
+    }
+
+    .back-price-val.up   { color: var(--green); }
+    .back-price-val.down { color: var(--red); }
+    .back-price-val.muted { color: var(--dimmer); font-size: 11px; font-weight: 400; }
+
+    /* ── Ghost dragged card (follows cursor) ── */
+    .drag-ghost {
+      position: fixed;
+      pointer-events: none;
+      z-index: 9999;
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: #1a1a1a;
+      box-shadow: var(--shadow-hover);
+      transform-origin: center center;
+      transition: width 0.15s ease, height 0.15s ease, transform 0.15s ease;
+    }
+
+    .drag-ghost img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* ── Showcase shelf ── */
+    .shelf-section {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      z-index: 20;
+    }
+
+    .shelf-label {
+      font-family: 'DM Mono', monospace;
+      font-size: 9.5px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: #bbb;
+    }
+
+    .shelf {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      padding: 15px 20px;
+      background: transparent;
+      border: none;
+      border-radius: 16px;
+    }
+
+    /* shelf slot */
+    .shelf-slot {
+      width: var(--shelf-w);
+      height: var(--shelf-h);
+      border-radius: var(--art-radius);
+      border: 1.5px dashed #ccc;
+      position: relative;
+      transition: border-color 0.2s, background 0.2s, transform 0.15s;
+      overflow: hidden;
+      cursor: default;
+    }
+
+    .shelf-slot.has-card {
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+    }
+
+    .shelf-slot.has-card:hover { transform: translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
+
+    .shelf-slot.drag-over {
+      border-color: #888;
+      border-style: solid;
+      background: rgba(0,0,0,0.03);
+      transform: scale(1.04);
+    }
+
+    /* empty slot icon */
+    .slot-empty-icon {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0.3;
+    }
+
+    .shelf-slot.has-card .slot-empty-icon { display: none; }
+
+    .shelf-slot img {
+      width: 100%; height: 100%;
+      object-fit: contain;
+      object-position: center;
+      display: block;
+      border-radius: var(--art-radius);
+      background: #1a1a1a;
+    }
+
+    /* prevent native long-press selection/callout on cards */
+    .card-scene, .card-front, .card-back, .card-inner {
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    /* prevent pull-to-refresh when dragging */
+    body.drag-active {
+      overscroll-behavior-y: none;
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(16px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .card-scene { animation: fadeUp 0.5s ease both; }
+
+    /* ── Mobile ── */
+    @media (max-width: 600px) {
+      :root {
+        --card-w:   179px;  /* 170 * 1.05 */
+        --card-h:   250px;  /* 238 * 1.05 */
+        --shelf-w:  60px;   /* 80 * 0.75 */
+        --shelf-h:  84px;   /* 112 * 0.75 */
+        --gap:      16px;
+        --lift:     -20px;
+      }
+
+      body { padding: 32px 0; overflow-y: auto; }
+
+      .track { padding: 50px 100px 60px; }
+      .stage::before, .stage::after { width: 80px; }
+      .back-pokemon { font-size: 14px; }
+      .back-price-val { font-size: 12px; }
+      .shelf { gap: 8px; padding: 10px 12px; }
+      .carousel-group { gap: 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Sort -->
+<div class="sort-row">
+  <span class="sort-label">Sort</span>
+  <div class="sort-wrap" id="sort-wrap">
+    <div class="sort-trigger" id="sort-trigger" onclick="toggleSort()">
+      <span class="sort-current" id="sort-label">All</span>
+      <svg class="sort-chevron" viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="2,3 5,7 8,3"/>
+      </svg>
+    </div>
+    <div class="sort-dropdown" id="sort-dropdown">
+      <div class="sort-option active" onclick="setSort('default','All',this)">All <svg class="sort-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,9 10,3"/></svg></div>
+      <div class="sort-option" onclick="setSort('value','Value',this)">Value <svg class="sort-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,9 10,3"/></svg></div>
+      <div class="sort-option" onclick="setSort('gain','Gain',this)">Gain <svg class="sort-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,9 10,3"/></svg></div>
+      <div class="sort-option" onclick="setSort('loss','Loss',this)">Loss <svg class="sort-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,9 10,3"/></svg></div>
+      <div class="sort-option" onclick="setSort('grade','Grade',this)">Grade <svg class="sort-check" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 4.5,9 10,3"/></svg></div>
+    </div>
+  </div>
+</div>
+
+<div class="carousel-group">
+<!-- Carousel -->
+<div class="stage">
+  <div class="track" id="track"></div>
+</div>
+
+<!-- Showcase shelf -->
+<div class="shelf-section">
+  <div class="shelf" id="shelf">
+    <div class="shelf-slot" data-slot="0">
+      <div class="slot-empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="shelf-slot" data-slot="1">
+      <div class="slot-empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="shelf-slot" data-slot="2">
+      <div class="slot-empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="shelf-slot" data-slot="3">
+      <div class="slot-empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+    <div class="shelf-slot" data-slot="4">
+      <div class="slot-empty-icon">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+        </svg>
+      </div>
+    </div>
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:9px;letter-spacing:0.12em;color:#3a3a3a;text-align:center;">
+    Drag to showcase · Click to find in carousel · Drag off to remove
+  </div>
+</div>
+</div><!-- end carousel-group -->
+
+<script>
+  const COLLECTION = [
+    { pokemon:"Gengar",                      card:"Gengar-EX",                         set:"Phantom Forces",        number:"PHF 34",  grade:10, date:"12/28/2025", price:450,  search:"Gengar-EX PHF 34",             cardCode:"PHF 34"  },
+    { pokemon:"Moltres & Zapdos & Articuno", card:"Moltres & Zapdos & Articuno-GX FA", set:"SM Black Star Promos",  number:"SM210",   grade:10, date:"12/24/2025", price:275,  search:null, staticImage:"https://images.tcggo.com/tcggo/storage/10386/moltres-zapdos-articuno-gx-pr-sm-sm210-sm-black-star-promos-pokemon.png", staticPrice:400 },
+    { pokemon:"Terapagos",                   card:"Terapagos ex SIR",                  set:"Stellar Crown",         number:"SCR 170", grade:10, date:"12/20/2025", price:275,  search:"Terapagos ex 170 Stellar Crown", cardCode:"SCR 170" },
+    { pokemon:"Boost Energy",                card:"Boost Energy Holo",                 set:"Battle Road Promo",     number:"040/P",   grade:10, date:"12/20/2025", price:275,  search:null, staticPrice:300, staticImage:"https://storage.googleapis.com/images.pricecharting.com/525b569bcdc62527631b887f0a908fd60370682e1e5323bd45b105761e7b5d6a/1600.jpg" },
+    { pokemon:"Mew",                         card:"Shining Mew",                       set:"Shining Legends",       number:"SLG 40",  grade:10, date:"9/9/2023",   price:160,  search:"Shining Mew 40",               cardCode:"SLG 40"  },
+    { pokemon:"Loudred",                     card:"Loudred AR",                        set:"Ancient Roar",          number:"SV4K 078",grade:10, date:"11/29/2025", price:50,   search:"Loudred SV4K 78", staticImage:"https://storage.googleapis.com/images.pricecharting.com/95faf51e64d8168e44eba534f48cd802cc9a2b8aeee14d66fad99443b437d12e/1600.jpg" },
+    { pokemon:"Dragonite",                   card:"Dragonite-EX",                      set:"Evolutions",            number:"EVO 72",  grade:10, date:"12/28/2025", price:85,   search:"Dragonite EX Evolutions 72",   cardCode:"EVO 72"  },
+    { pokemon:"Mew",                         card:"Mew FA",                            set:"Celebrations",          number:"CEL 25",  grade:10, date:"9/6/2023",   price:132,  search:"Mew 25 Celebrations",          cardCode:"CEL 25"  },
+    { pokemon:"Mew",                         card:"Mew EX",                            set:"Celebrations",          number:"CEL 88",  grade:10, date:"12/22/2025", price:115,  search:"Mew ex 88 Celebrations",       cardCode:"CEL 88"  },
+    { pokemon:"Mew",                         card:"Mew Black Star Promo",              set:"WOTC Black Star Promos", number:"PR 8",   grade:10, date:"9/8/2023",   price:57,   search:null, staticPrice:285, staticImage:"https://images.tcggo.com/tcggo/storage/19522/mew-pr-8-wizards-black-star-promos-pokemon.png" },
+    { pokemon:"Psyduck",                     card:"Psyduck 1st Edition",               set:"Team Rocket",           number:"TR 65",   grade:9,  date:"9/6/2023",   price:25,   search:null, staticPrice:35,  staticImage:"https://images.tcggo.com/tcggo/storage/19298/psyduck-tr-65-team-rocket-pokemon.png" },
+    { pokemon:"Charizard",                   card:"Charizard-EX",                      set:"Flashfire",             number:"FLF 11",  grade:10, date:"5/1/2026",   price:275,  search:"Charizard-EX FLF 11",          cardCode:"FLF 11"  },
+    { pokemon:"Blastoise",                   card:"M Blastoise-EX",                    set:"Evolutions",            number:"EVO 22",  grade:10, date:"3/4/2026",   price:150,  search:"M Blastoise EX Evolutions 22", cardCode:"EVO 22"  },
+  ];
+
+  const liveData   = {};
+  let eurToUsd     = 1.08;
+  let activeSort   = 'default';
+  let sortedOrder  = COLLECTION.map((_,i) => i);
+  const PROXY      = 'https://pokemon-collection-puce.vercel.app/api/proxy';
+  const fmt = n => n != null ? '$' + Math.round(n).toLocaleString() : '—';
+
+  // ── Sort ──
+  function toggleSort() {
+    const t = document.getElementById('sort-trigger');
+    const d = document.getElementById('sort-dropdown');
+    const open = d.classList.contains('open');
+    d.classList.toggle('open', !open);
+    t.classList.toggle('open', !open);
+  }
+
+  function setSort(key, label, el) {
+    activeSort = key;
+    document.getElementById('sort-label').textContent = label;
+    document.querySelectorAll('.sort-option').forEach(o => o.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById('sort-dropdown').classList.remove('open');
+    document.getElementById('sort-trigger').classList.remove('open');
+    applySort(); render();
+  }
+
+  document.addEventListener('click', e => {
+    const wrap = document.getElementById('sort-wrap');
+    if (wrap && !wrap.contains(e.target)) {
+      document.getElementById('sort-dropdown')?.classList.remove('open');
+      document.getElementById('sort-trigger')?.classList.remove('open');
+    }
+  });
+
+  function getLivePrice(i) {
+    const c = COLLECTION[i], live = liveData[i] || {};
+    return c.grade === 10 ? live.psa10 : live.psa9;
+  }
+
+  function applySort() {
+    const indices = COLLECTION.map((_,i) => i);
+    if (activeSort === 'default') { sortedOrder = indices; return; }
+    sortedOrder = indices.sort((a, b) => {
+      const pa = getLivePrice(a), pb = getLivePrice(b);
+      if (activeSort === 'value') return (pb ?? -Infinity) - (pa ?? -Infinity);
+      if (activeSort === 'gain')  return ((pb ?? -Infinity) - COLLECTION[b].price) - ((pa ?? -Infinity) - COLLECTION[a].price);
+      if (activeSort === 'loss') {
+        const da = pa != null ? pa - COLLECTION[a].price : Infinity;
+        const db = pb != null ? pb - COLLECTION[b].price : Infinity;
+        return da - db;
+      }
+      if (activeSort === 'grade') return COLLECTION[b].grade - COLLECTION[a].grade;
+      return 0;
+    });
+  }
+
+  // ── API ──
+  async function fetchEurUsd() {
+    try {
+      const r = await fetch('https://open.er-api.com/v6/latest/EUR');
+      const j = await r.json();
+      if (j?.rates?.USD) eurToUsd = j.rates.USD;
+    } catch {}
+  }
+
+  async function fetchCard(idx) {
+    const c = COLLECTION[idx];
+    if (!c.search) return null;
+    try {
+      const r = await fetch(`${PROXY}?endpoint=cards&search=${encodeURIComponent(c.search)}`);
+      const j = await r.json();
+      const results = j.data || [];
+      if (c.cardCode) return results.find(r => r.card_code_number === c.cardCode) || results[0] || null;
+      return results[0] || null;
+    } catch { return null; }
+  }
+
+  function extractPrice(data, grade) {
+    if (!data) return null;
+    const ebay = data?.prices?.ebay?.graded?.psa?.[grade]?.median_price;
+    if (ebay) return ebay;
+    const cmEur = data?.prices?.cardmarket?.graded?.psa?.[`psa${grade}`];
+    if (cmEur) return cmEur * eurToUsd;
+    return null;
+  }
+
+  // ── Render carousel ──
+  function render() {
+    const trackEl = document.getElementById('track');
+    trackEl.innerHTML = sortedOrder.map((i, vi) => {
+      const c    = COLLECTION[i];
+      const live = liveData[i] || {};
+      const price  = c.grade === 10 ? live.psa10 : live.psa9;
+      const diff   = price != null ? price - c.price : null;
+      const nowCls = diff == null ? 'muted' : diff >= 0 ? 'up' : 'down';
+      const nowTxt = price != null ? fmt(price) : '…';
+
+      const artHtml = live.image
+        ? `<img src="${live.image}" alt="${c.card}" loading="lazy" draggable="false"/>`
+        : `<div class="shimmer"></div>`;
+
+      return `
+      <div class="card-scene" data-idx="${i}" style="animation-delay:${vi*0.06}s">
+        <div class="card-inner">
+          <div class="card-face card-front">${artHtml}</div>
+          <div class="card-face card-back">
+            <span class="back-grade grade-${c.grade}">PSA ${c.grade}</span>
+            <div class="back-pokemon">${c.pokemon}</div>
+            <div class="back-card-name">${c.card}</div>
+            <div class="back-set">${c.set} · ${c.number}</div>
+            <div class="back-divider"></div>
+            <div class="back-prices">
+              <div class="back-price-col">
+                <span class="back-price-label">Bought</span>
+                <span class="back-price-val">${fmt(c.price)}</span>
+              </div>
+              <div class="back-price-col right">
+                <span class="back-price-label">Now</span>
+                <span class="back-price-val now-val ${nowCls}">${nowTxt}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+
+    sortedOrder.forEach(i => {
+      if (!liveData[i]?.image) {
+        setTimeout(() => {
+          const s = document.querySelector(`[data-idx="${i}"] .shimmer`);
+          if (s) s.outerHTML = `<div class="card-front-placeholder"></div>`;
+        }, 8000);
+      }
+    });
+
+    attachCardDrag();
+  }
+
+  // ── Update single card ──
+  function updateCard(idx) {
+    const el = document.querySelector(`[data-idx="${idx}"]`);
+    if (!el) return;
+    const c = COLLECTION[idx], live = liveData[idx] || {};
+    const price = c.grade === 10 ? live.psa10 : live.psa9;
+    const diff  = price != null ? price - c.price : null;
+
+    const front = el.querySelector('.card-front');
+    if (front && live.image) front.innerHTML = `<img src="${live.image}" alt="${c.card}" loading="lazy" draggable="false"/>`;
+
+    const nowEl = el.querySelector('.now-val');
+    if (nowEl) {
+      nowEl.textContent = price != null ? fmt(price) : 'N/A';
+      nowEl.className   = `back-price-val now-val ${diff == null ? 'muted' : diff >= 0 ? 'up' : 'down'}`;
+    }
+
+    // also update any shelf slot showing this card
+    document.querySelectorAll(`.shelf-slot[data-card-idx="${idx}"] img`).forEach(img => {
+      if (live.image) img.src = live.image;
+    });
+  }
+
+  async function fetchAll() {
+    await fetchEurUsd();
+    await Promise.all(COLLECTION.map(async (c, i) => {
+      const data = await fetchCard(i);
+      liveData[i] = {
+        image: c.staticImage || data?.image || null,
+        psa10: c.staticPrice  || extractPrice(data, 10),
+        psa9:  c.staticPrice  || extractPrice(data, 9),
+      };
+      updateCard(i);
+      if (activeSort !== 'default') { applySort(); render(); }
+    }));
+  }
+
+  // ── Ghost drag card-to-shelf ──
+  let ghost       = null;
+  let ghostIdx    = null;
+  let dragCardActive = false;
+  let ghostOffX   = 0;
+  let ghostOffY   = 0;
+  const CARD_W    = 220;
+  const CARD_H    = 308;
+  const SHELF_W   = 82;
+  const SHELF_H   = 115;
+
+  function getShelfRect() {
+    return document.getElementById('shelf').getBoundingClientRect();
+  }
+
+  // lerp between card size and shelf size based on proximity to shelf
+  function getGhostSize(clientY) {
+    const shelfRect = getShelfRect();
+    const shelfTop  = shelfRect.top;
+    const startY    = shelfTop - 300; // start shrinking 300px above shelf
+    const t = Math.max(0, Math.min(1, (clientY - startY) / 300));
+    const w = CARD_W + (SHELF_W - CARD_W) * t;
+    const h = CARD_H + (SHELF_H - CARD_H) * t;
+    return { w, h, t };
+  }
+
+  function createGhost(idx, clientX, clientY, srcEl) {
+    const rect = srcEl.getBoundingClientRect();
+    ghostOffX = clientX - rect.left;
+    ghostOffY = clientY - rect.top;
+
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.style.width  = CARD_W + 'px';
+    ghost.style.height = CARD_H + 'px';
+    ghost.style.left   = (clientX - ghostOffX) + 'px';
+    ghost.style.top    = (clientY - ghostOffY) + 'px';
+
+    const live = liveData[idx];
+    if (live?.image) {
+      ghost.innerHTML = `<img src="${live.image}" draggable="false"/>`;
+    } else {
+      ghost.style.background = '#1a1a1a';
+    }
+
+    document.body.appendChild(ghost);
+    ghostIdx = idx;
+    dragCardActive = true;
+  }
+
+  function moveGhost(clientX, clientY) {
+    if (!ghost) return;
+    const { w, h } = getGhostSize(clientY);
+    ghost.style.width  = w + 'px';
+    ghost.style.height = h + 'px';
+    // keep ghost centered on cursor as it scales
+    const scaleOffX = ghostOffX * (w / CARD_W);
+    const scaleOffY = ghostOffY * (h / CARD_H);
+    ghost.style.left = (clientX - scaleOffX) + 'px';
+    ghost.style.top  = (clientY - scaleOffY) + 'px';
+
+    // highlight slot under ghost
+    const shelfRect = getShelfRect();
+    const overShelf = clientY > shelfRect.top && clientY < shelfRect.bottom &&
+                      clientX > shelfRect.left && clientX < shelfRect.right;
+
+    document.querySelectorAll('.shelf-slot').forEach(slot => {
+      slot.classList.remove('drag-over');
+      if (overShelf) {
+        const sr = slot.getBoundingClientRect();
+        if (clientX > sr.left && clientX < sr.right) slot.classList.add('drag-over');
+      }
+    });
+  }
+
+  function dropGhost(clientX, clientY) {
+    if (!ghost) return;
+    ghost.remove(); ghost = null;
+    document.querySelectorAll('.shelf-slot').forEach(s => s.classList.remove('drag-over'));
+
+    const shelfRect = getShelfRect();
+    const overShelf = clientY > shelfRect.top - 20 && clientY < shelfRect.bottom + 20 &&
+                      clientX > shelfRect.left && clientX < shelfRect.right;
+
+    if (overShelf && ghostIdx != null) {
+      // find which slot
+      let target = null;
+      document.querySelectorAll('.shelf-slot').forEach(slot => {
+        const sr = slot.getBoundingClientRect();
+        if (clientX > sr.left && clientX < sr.right) target = slot;
+      });
+      if (!target) target = findEmptySlot();
+      if (target) placeInSlot(target, ghostIdx);
+    }
+
+    dragCardActive = false;
+    ghostIdx = null;
+  }
+
+  function findEmptySlot() {
+    return document.querySelector('.shelf-slot:not(.has-card)') || document.querySelector('.shelf-slot');
+  }
+
+  function placeInSlot(slot, idx) {
+    const live = liveData[idx];
+    const imgSrc = live?.image || '';
+    slot.setAttribute('data-card-idx', idx);
+    slot.classList.add('has-card');
+    slot.innerHTML = `<img src="${imgSrc}" alt="${COLLECTION[idx].card}" draggable="false"/>`;
+    slot.onclick = () => scrollToCard(idx);
+  }
+
+  function clearSlot(slot) {
+    slot.removeAttribute('data-card-idx');
+    slot.classList.remove('has-card');
+    slot.innerHTML = `<div class="slot-empty-icon">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+    </div>`;
+    slot.onclick = null;
+  }
+
+  // ── Scroll carousel to card & highlight ──
+  function scrollToCard(idx) {
+    const scene = document.querySelector(`[data-idx="${idx}"]`);
+    if (!scene) return;
+    scene.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+    scene.classList.add('highlight');
+    setTimeout(() => scene.classList.remove('highlight'), 1200);
+  }
+
+  // ── Shelf slot drag-off-to-clear ──
+  let shelfDragSlot = null;
+  let shelfGhost    = null;
+  let shelfDragDist = 0;
+  let shelfStartX   = 0;
+  let shelfStartY   = 0;
+
+  function attachShelfDrag() {
+    document.querySelectorAll('.shelf-slot.has-card').forEach(slot => {
+      slot.addEventListener('mousedown', onShelfMouseDown);
+      slot.addEventListener('touchstart', onShelfTouchStart, { passive: true });
+    });
+  }
+
+  function onShelfMouseDown(e) {
+    const slot = e.currentTarget;
+    if (!slot.classList.contains('has-card')) return;
+    shelfDragSlot = slot;
+    shelfDragDist = 0;
+    shelfStartX   = e.clientX;
+    shelfStartY   = e.clientY;
+    e.stopPropagation();
+
+    const rect   = slot.getBoundingClientRect();
+    shelfGhost   = document.createElement('div');
+    shelfGhost.className = 'drag-ghost';
+    shelfGhost.style.cssText = `width:${SHELF_W}px;height:${SHELF_H}px;left:${rect.left}px;top:${rect.top}px;transition:none;`;
+    const img = slot.querySelector('img');
+    if (img) shelfGhost.innerHTML = `<img src="${img.src}" draggable="false"/>`;
+    document.body.appendChild(shelfGhost);
+
+    document.addEventListener('mousemove', onShelfMouseMove);
+    document.addEventListener('mouseup',   onShelfMouseUp);
+  }
+
+  function onShelfMouseMove(e) {
+    if (!shelfGhost) return;
+    const dx = e.clientX - shelfStartX, dy = e.clientY - shelfStartY;
+    shelfDragDist = Math.sqrt(dx*dx + dy*dy);
+    shelfGhost.style.left = (shelfStartX - SHELF_W/2 + dx) + 'px';
+    shelfGhost.style.top  = (shelfStartY - SHELF_H/2 + dy) + 'px';
+  }
+
+  function onShelfMouseUp(e) {
+    document.removeEventListener('mousemove', onShelfMouseMove);
+    document.removeEventListener('mouseup',   onShelfMouseUp);
+    if (!shelfGhost) return;
+    shelfGhost.remove(); shelfGhost = null;
+
+    if (shelfDragDist > 40) {
+      // dropped outside shelf → clear
+      const shelfRect = getShelfRect();
+      const overShelf = e.clientY > shelfRect.top && e.clientY < shelfRect.bottom;
+      if (!overShelf && shelfDragSlot) clearSlot(shelfDragSlot);
+    }
+    shelfDragSlot = null;
+  }
+
+  function onShelfTouchStart(e) {
+    const slot = e.currentTarget;
+    if (!slot.classList.contains('has-card')) return;
+    shelfDragSlot = slot;
+    shelfStartX   = e.touches[0].clientX;
+    shelfStartY   = e.touches[0].clientY;
+    shelfDragDist = 0;
+
+    const rect = slot.getBoundingClientRect();
+    shelfGhost = document.createElement('div');
+    shelfGhost.className = 'drag-ghost';
+    shelfGhost.style.cssText = `width:${SHELF_W}px;height:${SHELF_H}px;left:${rect.left}px;top:${rect.top}px;transition:none;`;
+    const img = slot.querySelector('img');
+    if (img) shelfGhost.innerHTML = `<img src="${img.src}" draggable="false"/>`;
+    document.body.appendChild(shelfGhost);
+
+    slot.addEventListener('touchmove', onShelfTouchMove, { passive: true });
+    slot.addEventListener('touchend',  onShelfTouchEnd);
+  }
+
+  function onShelfTouchMove(e) {
+    if (!shelfGhost) return;
+    const dx = e.touches[0].clientX - shelfStartX, dy = e.touches[0].clientY - shelfStartY;
+    shelfDragDist = Math.sqrt(dx*dx + dy*dy);
+    shelfGhost.style.left = (shelfStartX - SHELF_W/2 + dx) + 'px';
+    shelfGhost.style.top  = (shelfStartY - SHELF_H/2 + dy) + 'px';
+  }
+
+  function onShelfTouchEnd(e) {
+    if (!shelfGhost) return;
+    shelfGhost.remove(); shelfGhost = null;
+    if (shelfDragDist > 60 && shelfDragSlot) clearSlot(shelfDragSlot);
+    shelfDragSlot = null;
+  }
+
+  // ── Card drag (carousel → shelf) ──
+  function attachCardDrag() {
+    document.querySelectorAll('.card-scene').forEach(scene => {
+      const front = scene.querySelector('.card-front');
+      front.addEventListener('mousedown', onCardMouseDown);
+      front.addEventListener('touchstart', onCardTouchStart, { passive: false });
+    });
+
+    // click (flip) only if not dragging
+    document.querySelectorAll('.card-scene').forEach(scene => {
+      scene.addEventListener('click', () => {
+        if (dragDist > 8 || dragCardActive) return;
+        scene.classList.toggle('flipped');
+      });
+    });
+  }
+
+  let cardDragScene = null;
+
+  function onCardMouseDown(e) {
+    const scene = e.currentTarget.closest('.card-scene');
+    if (scene.classList.contains('flipped')) return;
+    cardDragScene = scene;
+    const idx = parseInt(scene.dataset.idx);
+    createGhost(idx, e.clientX, e.clientY, scene);
+    e.preventDefault();
+    e.stopPropagation();
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!dragCardActive) return;
+    moveGhost(e.clientX, e.clientY);
+  });
+
+  document.addEventListener('mouseup', e => {
+    if (!dragCardActive) return;
+    dropGhost(e.clientX, e.clientY);
+    cardDragScene = null;
+    setTimeout(() => attachShelfDrag(), 100);
+  });
+
+  // ── Card touch — long press to drag, tap to flip/unflip ──
+  let longPressTimer  = null;
+  let touchHoldIdx    = null;
+  let touchHoldScene  = null;
+  let touchHoldStartX = 0;
+  let touchHoldStartY = 0;
+  let touchMoved      = false;
+
+  function onCardTouchStart(e) {
+    const scene = e.currentTarget.closest('.card-scene');
+    const t     = e.touches[0];
+    touchHoldScene  = scene;
+    touchHoldIdx    = parseInt(scene.dataset.idx);
+    touchHoldStartX = t.clientX;
+    touchHoldStartY = t.clientY;
+    touchMoved      = false;
+
+    // 1 second long press activates drag — only on front face
+    if (!scene.classList.contains('flipped')) {
+      longPressTimer = setTimeout(() => {
+        if (!touchMoved) {
+          cardDragScene = scene;
+          createGhost(touchHoldIdx, touchHoldStartX, touchHoldStartY, scene);
+          document.body.classList.add('drag-active'); // disable pull-to-refresh
+        }
+      }, 1000);
+    }
+  }
+
+  // cancel long press if finger moves significantly
+  document.addEventListener('touchmove', e => {
+    if (touchHoldScene && !dragCardActive) {
+      const t  = e.touches[0];
+      const dx = Math.abs(t.clientX - touchHoldStartX);
+      const dy = Math.abs(t.clientY - touchHoldStartY);
+      if (dx > 10 || dy > 10) {
+        touchMoved = true;
+        clearTimeout(longPressTimer);
+        longPressTimer = null;
+      }
+    }
+    if (!dragCardActive) return;
+    e.preventDefault(); // blocks Chrome pull-to-refresh during drag
+    moveGhost(e.touches[0].clientX, e.touches[0].clientY);
+  }, { passive: false }); // must be non-passive to call preventDefault
+
+  document.addEventListener('touchend', e => {
+    clearTimeout(longPressTimer);
+    longPressTimer = null;
+
+    if (dragCardActive) {
+      const t = e.changedTouches[0];
+      dropGhost(t.clientX, t.clientY);
+      document.body.classList.remove('drag-active');
+      cardDragScene = null;
+      setTimeout(() => attachShelfDrag(), 100);
+      touchHoldScene = null;
+      return;
+    }
+
+    // tap = flip toggle (works on both front and back)
+    if (!touchMoved && touchHoldScene) {
+      touchHoldScene.classList.toggle('flipped');
+    }
+
+    touchHoldScene = null;
+    touchHoldIdx   = null;
+  });
+
+  // ── Carousel momentum scroll ──
+  const track = document.getElementById('track');
+  let isDragging = false;
+  let startX     = 0;
+  let scrollLeft = 0;
+  let velX       = 0;
+  let lastX      = 0;
+  let lastT      = 0;
+  let rafId      = null;
+  let dragDist   = 0;
+
+  function cancelMomentum() {
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+  }
+
+  function momentum() {
+    velX *= 0.92;
+    if (Math.abs(velX) < 0.5) { cancelMomentum(); return; }
+    track.scrollLeft += velX;
+    rafId = requestAnimationFrame(momentum);
+  }
+
+  track.addEventListener('mousedown', e => {
+    if (dragCardActive) return;
+    cancelMomentum();
+    isDragging = true;
+    dragDist   = 0;
+    startX     = e.pageX;
+    scrollLeft = track.scrollLeft;
+    lastX      = e.pageX;
+    lastT      = Date.now();
+    velX       = 0;
+    track.classList.add('dragging');
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', e => {
+    if (!isDragging || dragCardActive) return;
+    const dx = e.pageX - startX;
+    dragDist = Math.abs(dx);
+    track.scrollLeft = scrollLeft - dx;
+    const now = Date.now(), dt = now - lastT || 1;
+    velX  = (lastX - e.pageX) / dt * 16;
+    lastX = e.pageX; lastT = now;
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (!isDragging) return;
+    isDragging = false;
+    track.classList.remove('dragging');
+    rafId = requestAnimationFrame(momentum);
+    setTimeout(() => { dragDist = 0; }, 50);
+  });
+
+  // touch scroll
+  let touchStartX = 0, touchScrollL = 0, touchLastX = 0, touchLastT = 0, touchVelX = 0, touchDragDist = 0;
+
+  track.addEventListener('touchstart', e => {
+    if (dragCardActive) return;
+    cancelMomentum();
+    touchStartX  = e.touches[0].pageX;
+    touchScrollL = track.scrollLeft;
+    touchLastX   = e.touches[0].pageX;
+    touchLastT   = Date.now();
+    touchVelX    = 0; touchDragDist = 0;
+  }, { passive: true });
+
+  track.addEventListener('touchmove', e => {
+    if (dragCardActive) return;
+    const dx = e.touches[0].pageX - touchStartX;
+    touchDragDist = Math.abs(dx);
+    track.scrollLeft = touchScrollL - dx;
+    const now = Date.now(), dt = now - touchLastT || 1;
+    touchVelX  = (touchLastX - e.touches[0].pageX) / dt * 16;
+    touchLastX = e.touches[0].pageX; touchLastT = now;
+  }, { passive: true });
+
+  track.addEventListener('touchend', e => {
+    if (dragCardActive) return;
+    velX  = touchVelX;
+    rafId = requestAnimationFrame(momentum);
+    setTimeout(() => { touchDragDist = 0; }, 50);
+  }, { passive: true });
+
+  render();
+  fetchAll();
+</script>
+</body>
+</html>
